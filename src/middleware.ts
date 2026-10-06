@@ -5,9 +5,9 @@ export function middleware(request: NextRequest) {
     const { pathname } = request.nextUrl
 
     // --- 1. Global Kiosk Protection ---
-    // Protect all /kiosk-management UI routes AND /api/kiosk-management API routes (except the auth itself)
-    const isKioskRoute = pathname.startsWith('/kiosk-management')
-    const isKioskApiRoute = pathname.startsWith('/api/kiosk-management')
+    // Protect all /fuel-kiosk-management UI routes AND /api/fuel-kiosk-management API routes (except the auth itself)
+    const isKioskRoute = pathname.startsWith('/fuel-kiosk-management')
+    const isKioskApiRoute = pathname.startsWith('/api/fuel-kiosk-management')
 
     // We allow the public login page (/) and public auth API (/api/auth) to pass through without this check
     if (isKioskRoute || isKioskApiRoute) {
@@ -29,12 +29,12 @@ export function middleware(request: NextRequest) {
     // --- 2. Secondary Inbound/Outbound Module Protection ---
     // Specifically protect the inbound-outbound module using its own short-lived auth cookie
     // This stacks ON TOP of the global tracking cookie
-    if (pathname.startsWith('/kiosk-management/inbound-outbound')) {
+    if (pathname.startsWith('/fuel-kiosk-management/inbound-outbound')) {
         const inboundAuthCookie = request.cookies.get('inbound_outbound_token')
 
         if (!inboundAuthCookie) {
             const url = request.nextUrl.clone()
-            url.pathname = '/kiosk-management'
+            url.pathname = '/fuel-kiosk-management'
             return NextResponse.redirect(url)
         }
     }
@@ -51,7 +51,7 @@ export const config = {
          * - _next/image (image optimization files)
          * - favicon.ico (favicon file)
          * - api/auth (authentication APIs need to be unprotected to login!)
-         * But DO match everything else so we can cover /kiosk-management and /api/kiosk-management
+         * But DO match everything else so we can cover /fuel-kiosk-management and /api/fuel-kiosk-management
          */
         '/((?!_next/static|_next/image|favicon.ico|api/auth).*)',
     ],

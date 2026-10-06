@@ -61,7 +61,7 @@ export default function PublicKioskLoginPage() {
                     duration: 3000,
                 });
 
-                router.push("/kiosk-management");
+                router.push("/fuel-kiosk-management");
                 router.refresh();
             } else {
                 toast.error("Access Denied", {

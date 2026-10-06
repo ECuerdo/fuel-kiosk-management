@@ -1,8 +1,8 @@
 /.github/ @Jakeeeey @ECuerdo
 
-/src/app/(kiosk-management)/kiosk-management/_components/ @Jakeeeey @ECuerdo
+/src/app/(fuel-kiosk-management)/fuel-kiosk-management/_components/ @Jakeeeey @ECuerdo
 
-/src/app/(kiosk-management)/kiosk-management/layout.tsx @Jakeeeey @ECuerdo
+/src/app/(fuel-kiosk-management)/fuel-kiosk-management/layout.tsx @Jakeeeey @ECuerdo
 
 /src/app/globals.css @Jakeeeey @ECuerdo
 

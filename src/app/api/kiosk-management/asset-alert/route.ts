@@ -19,7 +19,7 @@ interface AssetAndEquipment {
 
 
 /**
- * POST /api/kiosk-management/asset-alert
+ * POST /api/fuel-kiosk-management/asset-alert
  * Scans RFID, checks if asset has warning enabled, and creates alert if needed
  */
 export async function POST(request: NextRequest) {
@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
         // Read token from cookies
         const cookieStore = await cookies();
         const kioskTokenCookie = cookieStore.get("kiosk_token");
-        
+
         let userContext = null;
         if (kioskTokenCookie) {
             try {
@@ -40,13 +40,13 @@ export async function POST(request: NextRequest) {
             }
         }
 
-        const body = await request.json() as { 
-            rfidCode?: string; 
+        const body = await request.json() as {
+            rfidCode?: string;
             scannerGateId?: string;
             scannerLocationName?: string;
         };
         console.log("[Asset Alert POST] Request Body:", JSON.stringify(body, null, 2));
-        
+
         const rfidCode = body.rfidCode?.trim();
         console.log("[Asset Alert POST] RFID Code (trimmed):", rfidCode);
 
@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
 
         const assetRes = await fetch(assetUrl, { headers });
         console.log("[Asset Alert POST] Asset Response Status:", assetRes.status, assetRes.statusText);
-        
+
         const assetData = await assetRes.json() as { data: AssetAndEquipment[] };
         console.log("[Asset Alert POST] Asset Response Data:", JSON.stringify(assetData, null, 2));
         console.log("[Asset Alert POST] Assets Found:", assetData.data?.length || 0);
@@ -97,9 +97,9 @@ export async function POST(request: NextRequest) {
             console.error("[Asset Alert POST] Asset NOT FOUND for RFID:", rfidCode);
             console.log("======= ASSET ALERT POST REQUEST END (404) =======\n");
             return NextResponse.json(
-                { 
-                    success: false, 
-                    message: "Asset not found. RFID code does not match any registered asset." 
+                {
+                    success: false,
+                    message: "Asset not found. RFID code does not match any registered asset."
                 },
                 { status: 404 }
             );
@@ -112,26 +112,26 @@ export async function POST(request: NextRequest) {
         console.log("[Asset Alert POST] === STEP 2: Checking Alert Conditions ===");
         console.log("[Asset Alert POST] is_active:", asset.is_active, "(must be 1)");
         console.log("[Asset Alert POST] is_active_warning:", asset.is_active_warning, "(must be 1)");
-        
+
         if (asset.is_active !== 1 || asset.is_active_warning !== 1) {
             // const reasons = [];
             // if (asset.is_active !== 1) reasons.push("asset is not active");
             // if (asset.is_active_warning !== 1) reasons.push("warning is not enabled");
-            
+
             // console.warn("[Asset Alert POST] Alert NOT triggered. Reasons:", reasons.join(", "));
-             console.warn("[Asset Alert POST] Alert NOT triggered. Reasons:");
+            console.warn("[Asset Alert POST] Alert NOT triggered. Reasons:");
             console.log("======= ASSET ALERT POST REQUEST END (No Alert) =======\n");
             return NextResponse.json(
-                { 
-                    success: false, 
+                {
+                    success: false,
                     // message: `Asset found  (${reasons.join(", ")}).`,
                     //  message: `Asset found.`,
-                    noAlert: true 
+                    noAlert: true
                 },
                 { status: 200 }
             );
         }
-        
+
         console.log("[Asset Alert POST] ✅ Both conditions met! Triggering alert...");
 
         // Step 3: Create alert in asset_perimeter_alerts
@@ -149,7 +149,7 @@ export async function POST(request: NextRequest) {
         const seconds = String(gmt8Time.getUTCSeconds()).padStart(2, '0');
         // No timezone indicator - Directus will store as-is
         const scannedAt = `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
-        
+
         const alertPayload = {
             asset_id: asset.id,
             accountable_user_id: asset.employee || null,
@@ -179,9 +179,9 @@ export async function POST(request: NextRequest) {
             console.error("[Asset Alert POST] ❌ Failed to create alert:", alertResponseData);
             console.log("======= ASSET ALERT POST REQUEST END (Error) =======\n");
             return NextResponse.json(
-                { 
-                    success: false, 
-                    message: "Failed to create alert. Please contact administrator." 
+                {
+                    success: false,
+                    message: "Failed to create alert. Please contact administrator."
                 },
                 { status: 500 }
             );
@@ -206,7 +206,7 @@ export async function POST(request: NextRequest) {
                 });
                 const itemUrl = `${API_BASE}/items/items?${itemQs.toString()}`;
                 const itemRes = await fetch(itemUrl, { headers });
-                
+
                 if (itemRes.ok) {
                     const itemData = await itemRes.json() as { data: Array<{ id: number; item_name: string }> };
                     const item = itemData.data?.[0];
@@ -215,7 +215,7 @@ export async function POST(request: NextRequest) {
                     }
                 }
             }
-            
+
             // Fetch accountable user name (from accountable_user_id)
             if (asset.employee) {
                 const accountableQs = new URLSearchParams({
@@ -225,20 +225,22 @@ export async function POST(request: NextRequest) {
                 });
                 const accountableUrl = `${API_BASE}/items/user?${accountableQs.toString()}`;
                 const accountableRes = await fetch(accountableUrl, { headers });
-                
+
                 if (accountableRes.ok) {
-                    const accountableData = await accountableRes.json() as { data: Array<{
-                        user_id: number;
-                        user_fname: string;
-                        user_lname: string;
-                    }> };
+                    const accountableData = await accountableRes.json() as {
+                        data: Array<{
+                            user_id: number;
+                            user_fname: string;
+                            user_lname: string;
+                        }>
+                    };
                     const accountable = accountableData.data?.[0];
                     if (accountable) {
                         accountableUserName = `${accountable.user_fname} ${accountable.user_lname}`;
                     }
                 }
             }
-            
+
             // Fetch employee name if employee exists
             if (asset.employee) {
                 const employeeQs = new URLSearchParams({
@@ -248,20 +250,22 @@ export async function POST(request: NextRequest) {
                 });
                 const employeeUrl = `${API_BASE}/items/user?${employeeQs.toString()}`;
                 const employeeRes = await fetch(employeeUrl, { headers });
-                
+
                 if (employeeRes.ok) {
-                    const employeeData = await employeeRes.json() as { data: Array<{
-                        user_id: number;
-                        user_fname: string;
-                        user_lname: string;
-                    }> };
+                    const employeeData = await employeeRes.json() as {
+                        data: Array<{
+                            user_id: number;
+                            user_fname: string;
+                            user_lname: string;
+                        }>
+                    };
                     const employee = employeeData.data?.[0];
                     if (employee) {
                         employeeName = `${employee.user_fname} ${employee.user_lname}`;
                     }
                 }
             }
-            
+
             // Fetch encoder name if encoder exists
             if (asset.encoder) {
                 const encoderQs = new URLSearchParams({
@@ -271,13 +275,15 @@ export async function POST(request: NextRequest) {
                 });
                 const encoderUrl = `${API_BASE}/items/user?${encoderQs.toString()}`;
                 const encoderRes = await fetch(encoderUrl, { headers });
-                
+
                 if (encoderRes.ok) {
-                    const encoderData = await encoderRes.json() as { data: Array<{
-                        user_id: number;
-                        user_fname: string;
-                        user_lname: string;
-                    }> };
+                    const encoderData = await encoderRes.json() as {
+                        data: Array<{
+                            user_id: number;
+                            user_fname: string;
+                            user_lname: string;
+                        }>
+                    };
                     const encoder = encoderData.data?.[0];
                     if (encoder) {
                         encoderName = `${encoder.user_fname} ${encoder.user_lname}`;
@@ -292,8 +298,8 @@ export async function POST(request: NextRequest) {
         console.log("======= ASSET ALERT POST REQUEST END (Success) =======\n");
 
         return NextResponse.json(
-            { 
-                success: true, 
+            {
+                success: true,
                 message: "Warning",
                 alert: {
                     alert_id: alertResponseData.data.alert_id,
@@ -322,7 +328,7 @@ export async function POST(request: NextRequest) {
 }
 
 /**
- * GET /api/kiosk-management/asset-alert
+ * GET /api/fuel-kiosk-management/asset-alert
  * Fetches all alerts with asset details
  */
 export async function GET(request: NextRequest) {
@@ -332,7 +338,7 @@ export async function GET(request: NextRequest) {
         // Read token from cookies
         const cookieStore = await cookies();
         const kioskTokenCookie = cookieStore.get("kiosk_token");
-        
+
         let userContext = null;
         if (kioskTokenCookie) {
             try {
@@ -379,18 +385,20 @@ export async function GET(request: NextRequest) {
 
         const alertsRes = await fetch(alertsUrl, { headers });
         console.log("[Asset Alert GET] Alerts Response Status:", alertsRes.status);
-        const alertsData = await alertsRes.json() as { data: Array<{
-            alert_id: number;
-            asset_id: number;
-            accountable_user_id: number | null;
-            scanner_gate_id: string | null;
-            scanner_location_name: string | null;
-            scanned_at: string;
-            alert_status: string;
-            resolved_by: number | null;
-            resolution_remarks: string | null;
-            resolved_at: string | null;
-        }> };
+        const alertsData = await alertsRes.json() as {
+            data: Array<{
+                alert_id: number;
+                asset_id: number;
+                accountable_user_id: number | null;
+                scanner_gate_id: string | null;
+                scanner_location_name: string | null;
+                scanned_at: string;
+                alert_status: string;
+                resolved_by: number | null;
+                resolution_remarks: string | null;
+                resolved_at: string | null;
+            }>
+        };
 
         if (!alertsRes.ok) {
             return NextResponse.json(
@@ -414,14 +422,16 @@ export async function GET(request: NextRequest) {
 
                     const assetUrl = `${API_BASE}/items/assets_and_equipment?${assetQs.toString()}`;
                     const assetRes = await fetch(assetUrl, { headers });
-                    const assetData = await assetRes.json() as { data: Array<{
-                        id: number;
-                        serial: string | null;
-                        barcode: string | null;
-                        item_id: number | null;
-                        employee: number | null;
-                        encoder: number | null;
-                    }> };
+                    const assetData = await assetRes.json() as {
+                        data: Array<{
+                            id: number;
+                            serial: string | null;
+                            barcode: string | null;
+                            item_id: number | null;
+                            employee: number | null;
+                            encoder: number | null;
+                        }>
+                    };
 
                     const asset = assetData.data?.[0];
                     let itemName = "Unknown Asset";
@@ -438,15 +448,17 @@ export async function GET(request: NextRequest) {
 
                         const itemUrl = `${API_BASE}/items/items?${itemQs.toString()}`;
                         const itemRes = await fetch(itemUrl, { headers });
-                        
+
                         if (itemRes.ok) {
-                            const itemData = await itemRes.json() as { data: Array<{
-                                id: number;
-                                item_name: string;
-                                item_type: number | null;
-                                item_classification: number | null;
-                            }> };
-                            
+                            const itemData = await itemRes.json() as {
+                                data: Array<{
+                                    id: number;
+                                    item_name: string;
+                                    item_type: number | null;
+                                    item_classification: number | null;
+                                }>
+                            };
+
                             const item = itemData.data?.[0];
                             if (item) {
                                 itemName = item.item_name;
@@ -465,14 +477,16 @@ export async function GET(request: NextRequest) {
 
                         const userUrl = `${API_BASE}/items/user?${userQs.toString()}`;
                         const userRes = await fetch(userUrl, { headers });
-                        
+
                         if (userRes.ok) {
-                            const userData = await userRes.json() as { data: Array<{
-                                user_id: number;
-                                user_fname: string;
-                                user_lname: string;
-                            }> };
-                            
+                            const userData = await userRes.json() as {
+                                data: Array<{
+                                    user_id: number;
+                                    user_fname: string;
+                                    user_lname: string;
+                                }>
+                            };
+
                             const user = userData.data?.[0];
                             if (user) {
                                 accountableUserName = `${user.user_fname} ${user.user_lname}`;
@@ -491,14 +505,16 @@ export async function GET(request: NextRequest) {
 
                         const employeeUrl = `${API_BASE}/items/user?${employeeQs.toString()}`;
                         const employeeRes = await fetch(employeeUrl, { headers });
-                        
+
                         if (employeeRes.ok) {
-                            const employeeData = await employeeRes.json() as { data: Array<{
-                                user_id: number;
-                                user_fname: string;
-                                user_lname: string;
-                            }> };
-                            
+                            const employeeData = await employeeRes.json() as {
+                                data: Array<{
+                                    user_id: number;
+                                    user_fname: string;
+                                    user_lname: string;
+                                }>
+                            };
+
                             const employee = employeeData.data?.[0];
                             if (employee) {
                                 employeeName = `${employee.user_fname} ${employee.user_lname}`;
@@ -517,14 +533,16 @@ export async function GET(request: NextRequest) {
 
                         const encoderUrl = `${API_BASE}/items/user?${encoderQs.toString()}`;
                         const encoderRes = await fetch(encoderUrl, { headers });
-                        
+
                         if (encoderRes.ok) {
-                            const encoderData = await encoderRes.json() as { data: Array<{
-                                user_id: number;
-                                user_fname: string;
-                                user_lname: string;
-                            }> };
-                            
+                            const encoderData = await encoderRes.json() as {
+                                data: Array<{
+                                    user_id: number;
+                                    user_fname: string;
+                                    user_lname: string;
+                                }>
+                            };
+
                             const encoder = encoderData.data?.[0];
                             if (encoder) {
                                 encoderName = `${encoder.user_fname} ${encoder.user_lname}`;
@@ -560,12 +578,12 @@ export async function GET(request: NextRequest) {
         console.log(API_BASE)
         console.log("[Asset Alert GET] Successfully fetched and enriched", enrichedAlerts.length, "alerts");
         console.log("======= ASSET ALERT GET REQUEST END (Success) =======\n");
-        
+
         return NextResponse.json(
-            { 
-                success: true, 
+            {
+                success: true,
                 alerts: enrichedAlerts,
-                total: enrichedAlerts.length 
+                total: enrichedAlerts.length
             },
             { status: 200 }
         );
@@ -581,7 +599,7 @@ export async function GET(request: NextRequest) {
 }
 
 /**
- * DELETE /api/kiosk-management/asset-alert?alertId=123
+ * DELETE /api/fuel-kiosk-management/asset-alert?alertId=123
  * Deletes an alert by ID
  */
 export async function DELETE(request: NextRequest) {
@@ -590,7 +608,7 @@ export async function DELETE(request: NextRequest) {
         // Read token from cookies
         const cookieStore = await cookies();
         const kioskTokenCookie = cookieStore.get("kiosk_token");
-        
+
         let userContext = null;
         if (kioskTokenCookie) {
             try {
