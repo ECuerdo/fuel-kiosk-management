@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2, Fuel, FileText, User, Gauge, ArrowRight } from "lucide-react";
-import { formatLiters, formatDateTime } from "../utils";
+import { formatLiters } from "../utils";
 
 interface DispenserReceiptModalProps {
     open: boolean;
@@ -31,11 +31,13 @@ export function DispenserReceiptModal({
 }: DispenserReceiptModalProps) {
     const [countdown, setCountdown] = useState<number>(10);
 
+    const handleClose = () => {
+        setCountdown(10);
+        onClose();
+    };
+
     useEffect(() => {
-        if (!open) {
-            setCountdown(10);
-            return;
-        }
+        if (!open) return;
 
         const timer = setInterval(() => {
             setCountdown((prev) => {
@@ -53,7 +55,7 @@ export function DispenserReceiptModal({
     if (!data) return null;
 
     return (
-        <Dialog open={open} onOpenChange={(val) => !val && onClose()}>
+        <Dialog open={open} onOpenChange={(val) => !val && handleClose()}>
             <DialogContent className="max-w-md rounded-3xl p-8 border-2 border-emerald-500/30 shadow-[0_0_50px_-12px_rgba(16,185,129,0.3)] bg-card space-y-6">
                 <DialogHeader className="text-center space-y-3">
                     <div className="mx-auto h-20 w-20 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-500 shadow-inner">
@@ -109,7 +111,7 @@ export function DispenserReceiptModal({
                 <DialogFooter className="flex flex-col sm:flex-col gap-3">
                     <Button
                         type="button"
-                        onClick={onClose}
+                        onClick={handleClose}
                         className="w-full h-12 text-base font-bold rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white gap-2 shadow-lg"
                     >
                         Done / Next Driver ({countdown}s)
