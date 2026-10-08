@@ -89,7 +89,8 @@ export async function POST(request: NextRequest) {
         const isProduction = process.env.NODE_ENV === "production";
 
         // Simple token format (can be a JWT in real-world scenarios)
-        const tokenPayload = btoa(JSON.stringify({ userId: user.user_id, dept: user.user_department, timestamp: Date.now() }));
+        // The card number is kept so a dispense can be recorded under the attendant who was logged in.
+        const tokenPayload = btoa(JSON.stringify({ userId: user.user_id, dept: user.user_department, rfid: rfidCode, timestamp: Date.now() }));
 
         const response = NextResponse.json({
             success: true,

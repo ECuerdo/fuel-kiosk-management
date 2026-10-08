@@ -37,7 +37,7 @@ export function UserBalanceCard({ userBalance }: UserBalanceCardProps) {
                             </div>
                             <p className="text-[9px] sm:text-xs text-muted-foreground font-mono mt-0.5 flex items-center gap-1">
                                 <FileText className="h-2.5 w-2.5 text-primary shrink-0" />
-                                <span className="truncate">Doc: <strong className="text-foreground">{userBalance.docNo}</strong></span>
+                                <span className="truncate">Doc: <strong className="text-foreground">{userBalance.allocationDocNo ?? "None"}</strong></span>
                             </p>
                         </div>
                     </div>

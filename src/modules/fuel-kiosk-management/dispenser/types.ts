@@ -1,3 +1,5 @@
+// The fuel balance of the user holding a card, as answered by the fuel service.
+// rfid is the card that was tapped; the allocation details are empty when the user has no allocation.
 export interface UserFuelBalance {
     userId: number;
     rfid: string;
@@ -5,10 +7,9 @@ export interface UserFuelBalance {
     middleName?: string | null;
     lastName: string;
     position: string;
-    allocationId: number;
-    dispatchId: number;
-    docNo: string;
-    allocatedAt: string;
+    allocationId: number | null;
+    allocationDocNo: string | null;
+    allocatedAt: string | null;
     allocatedLiters: number;
     usedLiters: number;
     remainingLiters: number;
@@ -23,12 +24,26 @@ export interface FuelUsageRecord {
     created_by?: number;
 }
 
+// What the dispenser screen sends to record fuel drawn.
+// requestId is made up once per dispense and sent again unchanged on a retry.
 export interface DispenseRequest {
-    userId: number;
+    cardNumber: string;
+    liters: number;
+    requestId: string;
+}
+
+// One recorded dispense, as answered by the fuel service.
+// alreadyRecorded is true when this request had been recorded before and the first record is returned.
+export interface DispenseResult {
+    id: number;
     docNo: string;
-    liter: number;
-    rfid?: string;
-    createdBy?: number;
+    requestId: string;
+    userId: number;
+    liters: number;
+    createdBy: number;
+    createdAt: string;
+    remainingLiters: number;
+    alreadyRecorded: boolean;
 }
 
 export type DispenserStep = "RFID_INPUT" | "DISPENSE_NUMPAD" | "SUCCESS";
