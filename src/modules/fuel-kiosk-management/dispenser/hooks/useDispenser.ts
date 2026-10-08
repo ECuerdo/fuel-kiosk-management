@@ -1,7 +1,8 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { UserFuelBalance, DispenseRequest, DispenserStep } from "../types";
 import { fetchProvider } from "../providers/fetchProvider";
 import { toast } from "sonner";
+import { PendingDispense, requestIdFor } from "@/lib/fuel-request-id";
 
 export function useDispenser() {
     const [step, setStep] = useState<DispenserStep>("RFID_INPUT");
@@ -17,7 +18,11 @@ export function useDispenser() {
         remainingLiters: number;
     } | null>(null);
 
+    // The dispense last sent, kept so that sending it again reuses the same request ID.
+    const pendingDispense = useRef<PendingDispense | null>(null);
+
     const resetState = useCallback(() => {
+        pendingDispense.current = null;
         setStep("RFID_INPUT");
         setRfid("");
         setUserBalance(null);
@@ -71,30 +76,34 @@ export function useDispenser() {
 
         setLoading(true);
         try {
+            // Same card and same liters as the last attempt reuse its request ID, so a retry after a
+            // timeout returns the first record instead of storing a second one.
+            pendingDispense.current = requestIdFor(pendingDispense.current, userBalance.rfid, liters,
+                () => crypto.randomUUID());
             const req: DispenseRequest = {
-                userId: userBalance.userId,
-                docNo: userBalance.docNo,
-                liter: liters,
-                rfid: userBalance.rfid,
-                createdBy: userBalance.userId,
+                cardNumber: userBalance.rfid,
+                liters,
+                requestId: pendingDispense.current.requestId,
             };
 
             const res = await fetchProvider.dispenseFuel(req);
-
-            const generatedDocNo = res.record?.doc_no || res.docNo || userBalance.docNo;
-            const updatedRemaining = Math.max(0, userBalance.remainingLiters - liters);
+            pendingDispense.current = null;
 
             setDispenseSuccessData({
-                dispensedLiters: liters,
-                docNo: generatedDocNo,
+                dispensedLiters: res.liters,
+                docNo: res.receiptNo,
                 userName: `${userBalance.firstName} ${userBalance.lastName}`,
-                remainingLiters: updatedRemaining,
+                remainingLiters: res.remainingLiters,
             });
 
             setStep("SUCCESS");
-            toast.success(`Successfully dispensed ${liters.toFixed(2)} L!`);
+            if (res.alreadyRecorded) {
+                toast.info(`Already recorded. Receipt ${res.receiptNo}.`);
+            } else {
+                toast.success(`Successfully dispensed ${res.liters.toFixed(2)} L!`);
+            }
         } catch (err: unknown) {
-            const msg = err instanceof Error ? err.message : "Failed to record fuel dispensing.";
+            const msg = err instanceof Error ? err.message : "Fuel service unavailable. Do not dispense.";
             toast.error(msg);
         } finally {
             setLoading(false);
