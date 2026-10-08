@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createSession, INBOUND_SESSION_MS } from "@/lib/kiosk-session";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL;
 const TOKEN = process.env.DIRECTUS_STATIC_TOKEN;
@@ -42,20 +43,13 @@ export async function POST(request: NextRequest) {
             headers["Authorization"] = `Bearer ${TOKEN}`;
         }
 
-        console.log("[RFID] Fetching:", requestUrl);
-
         const userRes = await fetch(requestUrl, { headers });
 
         const rawText = await userRes.text();
-        console.log("[RFID] Directus status:", userRes.status, "| body:", rawText);
-
         if (!userRes.ok) {
+            console.error("[RFID] User directory answered", userRes.status);
             return NextResponse.json(
-                {
-                    authorized: false,
-                    message: "Failed to reach user directory.",
-                    debug: { directusStatus: userRes.status, directusBody: rawText },
-                },
+                { authorized: false, message: "Failed to reach user directory." },
                 { status: 502 }
             );
         }
@@ -73,18 +67,19 @@ export async function POST(request: NextRequest) {
         // Authorize only if user belongs to department ID 2 or 13
         const isAuthorized = AUTHORIZED_DEPARTMENT_IDS.includes(Number(user.user_department));
 
-        console.log("[RFID] user_department:", user.user_department, "| authorized:", isAuthorized);
-
         // If authorized, set a cookie for route protection
         const response = NextResponse.json({ authorized: isAuthorized }, { status: 200 });
 
         if (isAuthorized) {
             const isProduction = process.env.NODE_ENV === "production";
-            response.cookies.set("inbound_outbound_token", "true", {
+            const token = await createSession("inbound",
+                { userId: user.user_id, dept: user.user_department, rfid: rfidCode },
+                INBOUND_SESSION_MS, process.env.KIOSK_SESSION_SECRET);
+            response.cookies.set("inbound_outbound_token", token, {
                 httpOnly: true,
                 secure: isProduction ? (request.nextUrl.protocol === "https:") : false,
                 sameSite: "lax",
-                maxAge: 60 * 30, // 30 minutes
+                maxAge: INBOUND_SESSION_MS / 1000, // 30 minutes
                 path: "/",
             });
         }

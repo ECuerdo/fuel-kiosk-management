@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
+import { readSession } from '@/lib/kiosk-session'
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
     const { pathname } = request.nextUrl
 
     // --- 1. Global Kiosk Protection ---
@@ -11,9 +12,11 @@ export function middleware(request: NextRequest) {
 
     // We allow the public login page (/) and public auth API (/api/auth) to pass through without this check
     if (isKioskRoute || isKioskApiRoute) {
-        const kioskToken = request.cookies.get('kiosk_token')
+        // The session must have been signed by this server and must not have expired.
+        const session = await readSession('kiosk', request.cookies.get('kiosk_token')?.value,
+            process.env.KIOSK_SESSION_SECRET)
 
-        if (!kioskToken) {
+        if (!session) {
             // For APIs, return 401 Unauthorized
             if (isKioskApiRoute) {
                 return NextResponse.json({ success: false, message: 'Unauthorized access. Missing terminal token.' }, { status: 401 })
@@ -30,9 +33,10 @@ export function middleware(request: NextRequest) {
     // Specifically protect the inbound-outbound module using its own short-lived auth cookie
     // This stacks ON TOP of the global tracking cookie
     if (pathname.startsWith('/fuel-kiosk-management/inbound-outbound')) {
-        const inboundAuthCookie = request.cookies.get('inbound_outbound_token')
+        const inboundSession = await readSession('inbound', request.cookies.get('inbound_outbound_token')?.value,
+            process.env.KIOSK_SESSION_SECRET)
 
-        if (!inboundAuthCookie) {
+        if (!inboundSession) {
             const url = request.nextUrl.clone()
             url.pathname = '/fuel-kiosk-management'
             return NextResponse.redirect(url)

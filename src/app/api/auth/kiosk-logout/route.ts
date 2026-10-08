@@ -7,6 +7,7 @@ export async function POST() {
 
         // Delete the global kiosk token
         cookieStore.delete("kiosk_token");
+        cookieStore.delete("inbound_outbound_token");
 
         return NextResponse.json({ success: true, message: "Logged out from system successfully." });
     } catch (err) {

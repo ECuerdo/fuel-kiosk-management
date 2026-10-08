@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createSession, KIOSK_SESSION_MS } from "@/lib/kiosk-session";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL;
 const TOKEN = process.env.DIRECTUS_STATIC_TOKEN;
@@ -42,8 +43,6 @@ export async function POST(request: NextRequest) {
             console.warn("[Auth] DIRECTUS_STATIC_TOKEN is missing. This may lead to empty results if the collection is not public.");
         }
 
-        console.log("[Auth] Fetching user by RFID:", rfidCode);
-
         // Force 'no-store' so we always get fresh data from Directus instead of Next.js cache
         const userRes = await fetch(requestUrl, {
             headers,
@@ -67,7 +66,6 @@ export async function POST(request: NextRequest) {
         const user = userData.data?.[0];
 
         if (!user) {
-            console.warn(`[Auth] RFID not found in database: "${rfidCode}"`);
             return NextResponse.json(
                 { success: false, message: "RFID card not recognized." },
                 { status: 401 }
@@ -88,9 +86,17 @@ export async function POST(request: NextRequest) {
         // Detect if we are on HTTP or HTTPS to handle the 'secure' flag correctly
         const isProduction = process.env.NODE_ENV === "production";
 
-        // Simple token format (can be a JWT in real-world scenarios)
-        // The card number is kept so a dispense can be recorded under the attendant who was logged in.
-        const tokenPayload = btoa(JSON.stringify({ userId: user.user_id, dept: user.user_department, rfid: rfidCode, timestamp: Date.now() }));
+        // The session is signed with the server's secret, so it cannot be made up or changed in the browser.
+        // It keeps the card number so a dispense can be recorded under the attendant who was logged in.
+        let tokenPayload: string;
+        try {
+            tokenPayload = await createSession("kiosk",
+                { userId: user.user_id, dept: user.user_department, rfid: rfidCode },
+                KIOSK_SESSION_MS, process.env.KIOSK_SESSION_SECRET);
+        } catch (err) {
+            console.error("[Auth] Could not create a session:", err);
+            return NextResponse.json({ success: false, message: "Server configuration error." }, { status: 500 });
+        }
 
         const response = NextResponse.json({
             success: true,
@@ -104,7 +110,7 @@ export async function POST(request: NextRequest) {
             httpOnly: true,
             secure: isProduction ? (request.nextUrl.protocol === "https:") : false,
             sameSite: "lax",
-            maxAge: 60 * 60 * 24 * 365, // 365 days
+            maxAge: KIOSK_SESSION_MS / 1000, // 12 hours
             path: "/",
         });
 
