@@ -55,17 +55,3 @@ export async function fuelApiPost(config: FuelApiConfig, path: string, payload: 
     }
     return { status: response.status, body };
 }
-
-// The card number of the logged-in attendant, kept in the kiosk session at login.
-// Sessions created before the card number was stored there have none.
-export function attendantCardFromSession(sessionValue: string | undefined): string | undefined {
-    if (!sessionValue) {
-        return undefined;
-    }
-    try {
-        const session = JSON.parse(Buffer.from(sessionValue, "base64").toString("utf8")) as { rfid?: unknown };
-        return typeof session.rfid === "string" && session.rfid.trim() ? session.rfid.trim() : undefined;
-    } catch {
-        return undefined;
-    }
-}

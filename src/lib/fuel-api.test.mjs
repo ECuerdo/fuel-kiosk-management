@@ -2,7 +2,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { attendantCardFromSession, fuelApiPost } from "./fuel-api.ts";
+import { fuelApiPost } from "./fuel-api.ts";
 import { requestIdFor } from "./fuel-request-id.ts";
 
 const CONFIG = { baseUrl: "http://fuel.test:8408", apiKey: "test-key-0123456789abcdefghij" };
@@ -101,21 +101,6 @@ test("a busy answer from the service is passed through so the same request can b
 
     assert.deepEqual(await fuelApiPost(CONFIG, "/api/fuel/dispenses", {}, fakeFetch(503, busy).fn),
         { status: 503, body: busy });
-});
-
-test("the attendant's card number is read from the session value", () => {
-    const session = Buffer.from(JSON.stringify({ userId: 900101, dept: 13, rfid: "0009000101" })).toString("base64");
-
-    assert.equal(attendantCardFromSession(session), "0009000101");
-});
-
-test("a session without a card number, or one that cannot be read, gives no attendant card", () => {
-    const older = Buffer.from(JSON.stringify({ userId: 900101, dept: 13 })).toString("base64");
-
-    assert.equal(attendantCardFromSession(older), undefined);
-    assert.equal(attendantCardFromSession("not-base64-json"), undefined);
-    assert.equal(attendantCardFromSession(undefined), undefined);
-    assert.equal(attendantCardFromSession(""), undefined);
 });
 
 test("a first attempt gets a new request ID", () => {

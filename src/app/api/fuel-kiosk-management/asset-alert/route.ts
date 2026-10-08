@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { readSession } from "@/lib/kiosk-session";
 import { cookies } from "next/headers";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL;
@@ -29,16 +30,8 @@ export async function POST(request: NextRequest) {
         const cookieStore = await cookies();
         const kioskTokenCookie = cookieStore.get("kiosk_token");
 
-        let userContext = null;
-        if (kioskTokenCookie) {
-            try {
-                const decoded = JSON.parse(atob(kioskTokenCookie.value));
-                userContext = decoded;
-                console.log("[Asset Alert POST] User Context from Cookie:", JSON.stringify(userContext, null, 2));
-            } catch (err) {
-                console.warn("[Asset Alert POST] Failed to decode kiosk_token:", err);
-            }
-        }
+        const userContext = await readSession("kiosk", kioskTokenCookie?.value, process.env.KIOSK_SESSION_SECRET);
+        console.log("[Asset Alert POST] Attendant user:", userContext?.userId ?? "unknown");
 
         const body = await request.json() as {
             rfidCode?: string;
@@ -339,16 +332,8 @@ export async function GET(request: NextRequest) {
         const cookieStore = await cookies();
         const kioskTokenCookie = cookieStore.get("kiosk_token");
 
-        let userContext = null;
-        if (kioskTokenCookie) {
-            try {
-                const decoded = JSON.parse(atob(kioskTokenCookie.value));
-                userContext = decoded;
-                console.log("[Asset Alert GET] User Context from Cookie:", JSON.stringify(userContext, null, 2));
-            } catch (err) {
-                console.warn("[Asset Alert GET] Failed to decode kiosk_token:", err);
-            }
-        }
+        const userContext = await readSession("kiosk", kioskTokenCookie?.value, process.env.KIOSK_SESSION_SECRET);
+        console.log("[Asset Alert GET] Attendant user:", userContext?.userId ?? "unknown");
 
         if (!API_BASE) {
             console.error("[Asset Alert GET] Missing NEXT_PUBLIC_API_BASE_URL");
@@ -609,16 +594,8 @@ export async function DELETE(request: NextRequest) {
         const cookieStore = await cookies();
         const kioskTokenCookie = cookieStore.get("kiosk_token");
 
-        let userContext = null;
-        if (kioskTokenCookie) {
-            try {
-                const decoded = JSON.parse(atob(kioskTokenCookie.value));
-                userContext = decoded;
-                console.log("[Asset Alert DELETE] User Context from Cookie:", JSON.stringify(userContext, null, 2));
-            } catch (err) {
-                console.warn("[Asset Alert DELETE] Failed to decode kiosk_token:", err);
-            }
-        }
+        const userContext = await readSession("kiosk", kioskTokenCookie?.value, process.env.KIOSK_SESSION_SECRET);
+        console.log("[Asset Alert DELETE] Attendant user:", userContext?.userId ?? "unknown");
 
         const { searchParams } = new URL(request.url);
         const alertId = searchParams.get("alertId");

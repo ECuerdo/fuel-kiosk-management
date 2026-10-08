@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { attendantCardFromSession, fuelApiPost } from "@/lib/fuel-api";
+import { fuelApiPost } from "@/lib/fuel-api";
+import { readSession } from "@/lib/kiosk-session";
 
 const DIRECTUS_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 const AUTH_TOKEN = process.env.DIRECTUS_STATIC_TOKEN;
@@ -24,7 +25,9 @@ export async function POST(req: NextRequest) {
         );
     }
 
-    const attendantCardNumber = attendantCardFromSession(req.cookies.get("kiosk_token")?.value);
+    const session = await readSession("kiosk", req.cookies.get("kiosk_token")?.value,
+        process.env.KIOSK_SESSION_SECRET);
+    const attendantCardNumber = session?.rfid;
 
     const result = await fuelApiPost(
         { baseUrl: process.env.SPRING_API_BASE_URL, apiKey: process.env.FUEL_API_KEY },
