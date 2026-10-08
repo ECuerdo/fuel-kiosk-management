@@ -41,7 +41,7 @@ test("a base address ending in a slash still builds a clean address", async () =
 });
 
 test("passes the service's answer through: status and body", async () => {
-    const created = { receiptNo: "D-2026-0001", remainingLiters: 15.0, alreadyRecorded: false };
+    const created = { docNo: "D-2026-0001", remainingLiters: 15.0, alreadyRecorded: false };
     assert.deepEqual(await fuelApiPost(CONFIG, "/api/fuel/dispenses", {}, fakeFetch(201, created).fn),
         { status: 201, body: created });
 
