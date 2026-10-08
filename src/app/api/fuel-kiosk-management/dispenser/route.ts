@@ -7,7 +7,7 @@ const AUTH_TOKEN = process.env.DIRECTUS_STATIC_TOKEN;
 
 // POST /api/fuel-kiosk-management/dispenser
 // Body: {"cardNumber": "0012345678", "liters": 5.00, "requestId": "one value per dispense"}
-// Records fuel drawn through the fuel service, which checks the balance and issues the receipt number.
+// Records fuel drawn through the fuel service, which checks the balance and issues the document number (Doc No).
 // The attendant is taken from the kiosk session, not from the browser.
 // Whatever the service answers is passed on. If it gives no answer, the kiosk is told it is unavailable;
 // nothing is saved any other way and no success is reported.

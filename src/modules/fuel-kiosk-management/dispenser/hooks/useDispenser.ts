@@ -111,7 +111,7 @@ export function useDispenser() {
 
             setStep("SUCCESS");
             if (res.alreadyRecorded) {
-                toast.info(`Already recorded. Receipt ${res.receiptNo}.`);
+                toast.info(`Already recorded. Doc No ${res.receiptNo}.`);
             } else {
                 toast.success(`Successfully dispensed ${res.liters.toFixed(2)} L!`);
             }
