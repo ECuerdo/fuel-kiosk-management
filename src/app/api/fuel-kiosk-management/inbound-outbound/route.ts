@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { toStoredPhilippineTime } from "@/lib/philippine-time";
 
 interface DirectusUser {
     user_id: number;
@@ -202,8 +203,9 @@ export async function PATCH(req: NextRequest) {
             },
             body: JSON.stringify({
                 status,
-                ...(time_of_dispatch && { time_of_dispatch }),
-                ...(time_of_arrival && { time_of_arrival }),
+                // The browser sends UTC; the database keeps Philippine clock time.
+                ...(time_of_dispatch && { time_of_dispatch: toStoredPhilippineTime(time_of_dispatch) }),
+                ...(time_of_arrival && { time_of_arrival: toStoredPhilippineTime(time_of_arrival) }),
                 ...(driver_id && { driver_id }),
                 ...(remarks !== undefined && { remarks })
             })
@@ -345,7 +347,7 @@ export async function PATCH(req: NextRequest) {
                             body: JSON.stringify({
                                 query: { filter: { "invoice_id": { "_in": invoiceIds } } },
                                 data: { 
-                                    dispatch_date: time_of_dispatch || new Date().toISOString(),
+                                    dispatch_date: toStoredPhilippineTime(time_of_dispatch),
                                     transaction_status: "En Route",
                                     isDispatched: 1
                                 }
