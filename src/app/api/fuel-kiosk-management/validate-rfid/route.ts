@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSession, INBOUND_SESSION_MS } from "@/lib/kiosk-session";
+import { kioskKey, loginLimiter, tooManyAttempts } from "@/lib/kiosk-limits";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL;
 const TOKEN = process.env.DIRECTUS_STATIC_TOKEN;
@@ -17,6 +18,12 @@ export async function POST(request: NextRequest) {
                 { authorized: false, message: "RFID code is required." },
                 { status: 400 }
             );
+        }
+
+        const kiosk = kioskKey(request, "inbound");
+        const wait = loginLimiter.secondsUntilAllowed(kiosk);
+        if (wait > 0) {
+            return tooManyAttempts(wait);
         }
 
         if (!API_BASE) {
@@ -58,6 +65,10 @@ export async function POST(request: NextRequest) {
         const user = userData.data?.[0];
 
         if (!user) {
+            const pause = loginLimiter.recordFailure(kiosk);
+            if (pause > 0) {
+                return tooManyAttempts(pause);
+            }
             return NextResponse.json(
                 { authorized: false, message: "RFID card not recognized." },
                 { status: 200 }
@@ -66,6 +77,13 @@ export async function POST(request: NextRequest) {
 
         // Authorize only if user belongs to department ID 2 or 13
         const isAuthorized = AUTHORIZED_DEPARTMENT_IDS.includes(Number(user.user_department));
+
+        if (!isAuthorized) {
+            const pause = loginLimiter.recordFailure(kiosk);
+            if (pause > 0) {
+                return tooManyAttempts(pause);
+            }
+        }
 
         // If authorized, set a cookie for route protection
         const response = NextResponse.json({ authorized: isAuthorized }, { status: 200 });

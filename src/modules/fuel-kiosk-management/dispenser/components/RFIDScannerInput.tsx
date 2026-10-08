@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ScanLine, CreditCard, ArrowRight, Fuel, Sparkles, Loader2 } from "lucide-react";
+import { formatCountdown } from "@/lib/attempt-limiter";
 
 interface RFIDScannerInputProps {
     rfid: string;
@@ -12,6 +13,7 @@ interface RFIDScannerInputProps {
     onSubmit: (rfid: string) => void;
     loading: boolean;
     error: string | null;
+    lockoutSeconds: number;
 }
 
 export function RFIDScannerInput({
@@ -20,7 +22,9 @@ export function RFIDScannerInput({
     onSubmit,
     loading,
     error,
+    lockoutSeconds,
 }: RFIDScannerInputProps) {
+    const paused = lockoutSeconds > 0;
     const inputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
@@ -32,7 +36,7 @@ export function RFIDScannerInput({
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (rfid.trim()) {
+        if (rfid.trim() && !paused) {
             onSubmit(rfid.trim());
         }
     };
@@ -90,13 +94,13 @@ export function RFIDScannerInput({
                                     placeholder="Enter or scan RFID card number..."
                                     value={rfid}
                                     onChange={(e) => onRfidChange(e.target.value)}
-                                    disabled={loading}
+                                    disabled={loading || paused}
                                     className="h-10 sm:h-12 px-3 rounded-xl text-xs sm:text-base font-mono font-bold tracking-wider border-2 border-border focus-visible:border-primary shadow-inner bg-background/50"
                                     autoComplete="off"
                                 />
                                 <Button
                                     type="submit"
-                                    disabled={loading || !rfid.trim()}
+                                    disabled={loading || paused || !rfid.trim()}
                                     className="h-10 sm:h-12 px-4 rounded-xl font-bold gap-1 text-xs sm:text-sm shadow-md shrink-0"
                                 >
                                     {loading ? (
@@ -111,7 +115,14 @@ export function RFIDScannerInput({
                             </div>
                         </div>
 
-                        {error && (
+                        {paused && (
+                            <div className="p-2 rounded-xl bg-destructive/10 border border-destructive/30 text-destructive text-xs font-semibold flex items-center gap-2">
+                                <div className="h-2 w-2 rounded-full bg-destructive shrink-0" />
+                                <span>Too many attempts. Try again in {formatCountdown(lockoutSeconds)}.</span>
+                            </div>
+                        )}
+
+                        {error && !paused && (
                             <div className="p-2 rounded-xl bg-destructive/10 border border-destructive/30 text-destructive text-xs font-semibold flex items-center gap-2">
                                 <div className="h-2 w-2 rounded-full bg-destructive animate-ping shrink-0" />
                                 <span>{error}</span>

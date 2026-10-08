@@ -6,12 +6,15 @@ import { toast } from "sonner";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ScanLine, Activity, Loader2 } from "lucide-react";
+import { useLockout } from "@/lib/use-lockout";
+import { formatCountdown } from "@/lib/attempt-limiter";
 
 export default function PublicKioskLoginPage() {
     const router = useRouter();
     const [rfidValue, setRfidValue] = useState("");
     const [loading, setLoading] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
+    const { secondsLeft, lockFor } = useLockout();
 
     // Kiosk Lockdown: Disable right-click and maintain focus
     useEffect(() => {
@@ -36,7 +39,7 @@ export default function PublicKioskLoginPage() {
     }, [loading]);
 
     const handleRfidScan = async (code: string) => {
-        if (!code.trim() || loading) return;
+        if (!code.trim() || loading || secondsLeft > 0) return;
 
         setLoading(true);
 
@@ -53,7 +56,7 @@ export default function PublicKioskLoginPage() {
 
             clearTimeout(timeoutId);
 
-            const data = await res.json() as { success: boolean; message?: string; user?: { firstName: string; lastName: string } };
+            const data = await res.json() as { success: boolean; message?: string; retryAfterSeconds?: number; user?: { firstName: string; lastName: string } };
 
             if (res.ok && data.success) {
                 toast.success(`Welcome, ${data.user?.firstName || 'User'}!`, {
@@ -63,6 +66,11 @@ export default function PublicKioskLoginPage() {
 
                 router.push("/fuel-kiosk-management");
                 router.refresh();
+            } else if (res.status === 429 && data.retryAfterSeconds) {
+                // Too many failed taps: the screen counts down until the kiosk may try again.
+                lockFor(data.retryAfterSeconds);
+                setRfidValue("");
+                setLoading(false);
             } else {
                 toast.error("Access Denied", {
                     description: data.message ?? "Invalid RFID or unauthorized department.",
@@ -159,15 +167,17 @@ export default function PublicKioskLoginPage() {
                                     }
                                 }}
                                 placeholder="[ INPUT REQUIRED ]"
-                                disabled={loading}
+                                disabled={loading || secondsLeft > 0}
                                 autoComplete="off"
                                 className="pl-9 text-center h-10 bg-black/60 hover:bg-black/70 border-white/10 border border-dashed font-mono text-xs sm:text-sm rounded-xl focus-visible:ring-blue-500 focus-visible:ring-offset-0 focus-visible:border-blue-400 text-blue-100 placeholder:text-blue-900/50 tracking-widest"
                             />
                         </div>
 
-                        <div className={`flex items-center gap-1.5 text-[9px] font-black tracking-widest uppercase ${loading ? "text-amber-400" : "text-blue-400/60"}`}>
+                        <div className={`flex items-center gap-1.5 text-[9px] font-black tracking-widest uppercase ${secondsLeft > 0 ? "text-red-400" : loading ? "text-amber-400" : "text-blue-400/60"}`}>
                             <Activity className="h-3 w-3" />
-                            {loading ? "Decrypting..." : "Hardware Interface Online"}
+                            {secondsLeft > 0
+                                ? `Too many attempts. Try again in ${formatCountdown(secondsLeft)}.`
+                                : loading ? "Decrypting..." : "Hardware Interface Online"}
                         </div>
                     </CardContent>
                 </Card>
