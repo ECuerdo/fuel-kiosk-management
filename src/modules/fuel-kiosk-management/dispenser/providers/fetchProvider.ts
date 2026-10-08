@@ -1,5 +1,12 @@
 import { UserFuelBalance, DispenseRequest, DispenseResult } from "../types";
 
+// Thrown when the kiosk is paused after too many failed card taps.
+export class LockoutError extends Error {
+    constructor(message: string, public readonly retryAfterSeconds: number) {
+        super(message);
+    }
+}
+
 // The message given for a refusal, or a fallback when there is none.
 async function messageFrom(res: Response, fallback: string): Promise<string> {
     const data = await res.json().catch(() => ({})) as { message?: string };
@@ -15,6 +22,10 @@ export const fetchProvider = {
             cache: "no-store",
         });
 
+        if (res.status === 429) {
+            const data = await res.json().catch(() => ({})) as { message?: string; retryAfterSeconds?: number };
+            throw new LockoutError(data.message || "Too many attempts.", data.retryAfterSeconds ?? 60);
+        }
         if (!res.ok) {
             throw new Error(await messageFrom(res, "RFID Card not found or invalid balance."));
         }

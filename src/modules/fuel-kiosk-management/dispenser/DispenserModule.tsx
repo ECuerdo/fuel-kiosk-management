@@ -18,6 +18,7 @@ export function DispenserModule() {
         loading,
         error,
         dispenseSuccessData,
+        lockoutSeconds,
         handleVerifyRfid,
         handleDispense,
         resetState,
@@ -34,6 +35,7 @@ export function DispenserModule() {
                         onSubmit={handleVerifyRfid}
                         loading={loading}
                         error={error}
+                        lockoutSeconds={lockoutSeconds}
                     />
                 </div>
             )}

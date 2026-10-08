@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSession, KIOSK_SESSION_MS } from "@/lib/kiosk-session";
+import { kioskKey, loginLimiter, tooManyAttempts } from "@/lib/kiosk-limits";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL;
 const TOKEN = process.env.DIRECTUS_STATIC_TOKEN;
@@ -17,6 +18,13 @@ export async function POST(request: NextRequest) {
                 { success: false, message: "RFID code is required." },
                 { status: 400 }
             );
+        }
+
+        // A kiosk that has had too many failed taps is refused before the card is even looked up.
+        const kiosk = kioskKey(request, "login");
+        const wait = loginLimiter.secondsUntilAllowed(kiosk);
+        if (wait > 0) {
+            return tooManyAttempts(wait);
         }
 
         if (!API_BASE) {
@@ -66,6 +74,10 @@ export async function POST(request: NextRequest) {
         const user = userData.data?.[0];
 
         if (!user) {
+            const pause = loginLimiter.recordFailure(kiosk);
+            if (pause > 0) {
+                return tooManyAttempts(pause);
+            }
             return NextResponse.json(
                 { success: false, message: "RFID card not recognized." },
                 { status: 401 }
@@ -77,6 +89,10 @@ export async function POST(request: NextRequest) {
 
         if (!isAuthorized) {
             console.warn(`[Auth] Authorized check failed for user ${user.user_id} in department ${user.user_department}`);
+            const pause = loginLimiter.recordFailure(kiosk);
+            if (pause > 0) {
+                return tooManyAttempts(pause);
+            }
             return NextResponse.json(
                 { success: false, message: "Your department is not authorized for Kiosk access." },
                 { status: 403 }

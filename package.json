@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "test": "node --test src/lib/fuel-api.test.mjs src/lib/kiosk-session.test.mjs"
+    "test": "node --test src/lib/fuel-api.test.mjs src/lib/kiosk-session.test.mjs src/lib/attempt-limiter.test.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.1.0",
