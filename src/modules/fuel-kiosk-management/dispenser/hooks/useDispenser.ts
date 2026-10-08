@@ -91,14 +91,14 @@ export function useDispenser() {
 
             setDispenseSuccessData({
                 dispensedLiters: res.liters,
-                docNo: res.receiptNo,
+                docNo: res.docNo,
                 userName: `${userBalance.firstName} ${userBalance.lastName}`,
                 remainingLiters: res.remainingLiters,
             });
 
             setStep("SUCCESS");
             if (res.alreadyRecorded) {
-                toast.info(`Already recorded. Receipt ${res.receiptNo}.`);
+                toast.info(`Already recorded. Doc No ${res.docNo}.`);
             } else {
                 toast.success(`Successfully dispensed ${res.liters.toFixed(2)} L!`);
             }

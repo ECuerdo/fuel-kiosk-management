@@ -36,7 +36,7 @@ export interface DispenseRequest {
 // alreadyRecorded is true when this request had been recorded before and the first record is returned.
 export interface DispenseResult {
     id: number;
-    receiptNo: string;
+    docNo: string;
     requestId: string;
     userId: number;
     liters: number;
