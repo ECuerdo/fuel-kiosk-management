@@ -3,7 +3,7 @@ import { UserFuelBalance, DispenseRequest, DispenserStep } from "../types";
 import { fetchProvider, LockoutError } from "../providers/fetchProvider";
 import { useLockout } from "@/lib/use-lockout";
 import { toast } from "sonner";
-import { PendingDispense, requestIdFor } from "@/lib/fuel-request-id";
+import { newRequestId, PendingDispense, requestIdFor } from "@/lib/fuel-request-id";
 
 export function useDispenser() {
     const [step, setStep] = useState<DispenserStep>("RFID_INPUT");
@@ -92,7 +92,7 @@ export function useDispenser() {
             // Same card and same liters as the last attempt reuse its request ID, so a retry after a
             // timeout returns the first record instead of storing a second one.
             pendingDispense.current = requestIdFor(pendingDispense.current, userBalance.rfid, liters,
-                () => crypto.randomUUID());
+                () => newRequestId());
             const req: DispenseRequest = {
                 cardNumber: userBalance.rfid,
                 liters,
